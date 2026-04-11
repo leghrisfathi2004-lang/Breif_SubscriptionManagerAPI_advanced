@@ -1,40 +1,40 @@
 const {user, sub, tran} = require('../database/module.js');
-const {resData, resMessage} = require('../middleware/respond.js')
+const {respond} = require('../middleware/respond.js');
 
 const addSub = async (req, res) => {
     try{
-        let b = req.body;
-        if(!b.name || !b.price || !b.billingCycle || !req.user.email )
-            return resMessage(res, 400, "required fields missing!");
+        const userId = req.user.id;
+        const {name, price, billingCycle, startDate, status} = req.body;
+        if( !name || !price || !billingCycle || !userId )
+            return respond(res, 400, "missing required fields!");
+
         const newSub = new sub({
-            name: b.name, 
-            price: b.price, 
-            billingCycle: b.billingCycle,
-            userEmail: req.user.email,
-            
+            name: name, 
+            price: price, 
+            billingCycle: billingCycle,
+            userId,
+            status,
+            startDate
         });
-        let resultat = await newSub.save();
-        if(!resultat)
-            return resMessage(res, 400, "database errour!")
-        resMessage(res, 201, "created successfully!");
+        const resultat = await newSub.save();
+        return respond(res, 201, resultat);
     }catch(e) {
-        return resMessage(res, 500, e.message)
+        return respond(res, 500, e.message)
     }
 }
 
 const deleteSub = async (req, res) => {
     try{
-        const id = req.body.subId; 
+        const id = req.params.id; 
         if(!id)
-            return resMessage(res, 404, "id requuired!");
-        if(checkSub(id, req.user.email))
-            return resMessage(res, 401, "no access!");
+            return respond(res, 404);
         let resultat = await sub.deleteOne({ _id: id});
         if(resultat.deleteOne === 0)
-            return resMessage(res, 404, "Delete failed!");
-        resMessage(res, 204, "Deleted successfully!");
-    }catch(err){
-        return resMessage(res, 500, e.message);
+            return respond(res, 404, "subscribe not found!");
+        await tran.deleteMany({subId: id});
+        respond(res, 200);
+    }catch(e){
+        return respond(res, 500, e.message);
     }
 }
 
@@ -42,96 +42,47 @@ const getAllSubs = async (req, res) => {
     try{
         const subs = await sub.find({}).lean();
         if(!subs)
-            return resMessage(res, 204, "Empty!");
-        resData(res, 200, subs);
-    }catch{
-        return resMessage(res, 500, e.message)
+            return respond(res, 202);
+        respond(res, 200, subs);
+    }catch(e){
+        respond(res, 500, e.message);
     }
 }
 
-const getUserSubs = async (req, res) => {
-    try {
-        if(!req.user.email) 
-            return resMessage(res, 400, "missing required fields");
-        const subs = await sub.find({ userEmail: req.user.email }).lean();
-        if(!subs)
-            return resMessage(res, 204, "Empty!");
-        resData(res, 200, subs);
-    } catch(e){
-        return resMessage(res, 500, e.message);
-    }
-}
-
-//use this for active / cancel
 const updateSub = async (req, res) => {
     try{
-        const id = req.body.subId;
-        let flag = true;
-        if(!id || !req.body)
-            return resMessage(res, 400, "required fields missing!");
-        //filter updation data
-        const list = ['name', 'price','active'];
-        const newdata = {};
-
-        Object.keys(req.body).forEach( el => {
-            if(list.includes(el)){
-                newdata[el] = data[el];
-                flag = false;
-            }
-        })
-        //check if the newdata has any info
-        if(flag)
-            return resMessage(res, 404, "no allowed fileds!");
-        const resultat = await sub.findByIdAndUpdate(id, {$set: newdata}, {new: true, runValidators: true});
-        if(!resultat)
-            return resMessage(res, 400, "update failed!");
-        resMessage(res, 200, "updated success");
+        const {id} = req.params;
+        let {name, price, billingCycle, status} = req.body;
+        const SUB = await sub.findById(id);
+        if(!SUB || !name || !price || !billingCycle )
+            return respond(res, 400, "required fileds missing or wrong!");
+        status ||= SUB.status;
+        const newSub = await sub.findByIdAndUpdate(
+            id,
+            { $set: { name, price, billingCycle, status} },
+            { returnDocument: 'after' });
+        respond(res, 200, newSub);
     } catch(e) {
-        resMessage(res, 500, e.message)
+        respond(res, 500, e.message);
     }
 }
 
-const filterSubs = async (req, res) =>{
+const cancelSub = async (req, res) => {
     try{
-        const { id, name, price} = req.query;
-        let subInfo = { email: req.user.email};
-        if(id)      subInfo._id = id;
-        if(name)    subInfo.name = name;
-        if(price)   subInfo.price = price;
-
-        const subs = await sub.find(subInfo);
-        if(!subs.length)
-            return resMessage(res, 404, "filtred subs not found");
-        return resData(res, 200, subs);
-    }catch(e) {
-        resMessage(res, 500, e.message)
-    }
-}
-
-
-//transaction-----
-const addTran = async (req, res) => {
-    try{
-        const {amount, paymentDate, subId} = req.body;
-        if(!amount || !paymentDate || !subId)
-            return resMessage(res, 400, "missing required fields!");
-        const newtran = new tran ({
-            amount: amount,
-            paymentDate: paymentDate,
-            subId: subId
-        });
-
-        let resultat = await newtran.save();
-        if(!resultat)
-            return resMessage(res, 400, "crated faild!");
-        resMessage(res, 201, "created successfully!");
+        const {id} = req.params;
+        const SUB = await sub.findById(id);
+        if(!SUB || SUB.status === "cancel" )
+            return respond(res, 400, "wrong subscribe id, or already cancelled!");
+        const newSub = await sub.findByIdAndUpdate(
+            id,
+            { $set: {status: "cancel"} },
+            { returnDocument: 'after'} );
+        respond(res, 200, newSub);
     } catch(e) {
-        resMessage(res, 500, e.message);
+        respond(res, 500, e.message);
     }
 }
 
-// funstions----------
 
 
-
-module.exports = {addSub, deleteSub, patchSub, getAllSubs, getUserSubs, filterSubs, addTran, updateSub};
+module.exports = {addSub, deleteSub, getAllSubs, updateSub, cancelSub};
