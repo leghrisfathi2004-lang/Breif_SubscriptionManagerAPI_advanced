@@ -1,8 +1,8 @@
-const { ref, boolean } = require('joi');
+const { boolean, number, required } = require('joi');
 const mongoose = require('mongoose');
 
 //for user ----------
-const userShema = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -10,37 +10,36 @@ const userShema = new mongoose.Schema({
 });
 
 //for subs ----------
-const subShema = new mongoose.Schema({
+const subSchema = new mongoose.Schema({
     //id genere auto par mongodb
     name: { type: String, required: true },
     price: { type: Number, required: true },
-    billingCycle: { type: String, required: true },
+    billingCycle: { type: String, enum: ["yearly", "monthly"], required: true },
     createdAt: { type: Date, default: Date.now },
-    userEmail: {
-        type: String,
+    startDate: {type: Date , default: Date.now},
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
-    startDate: { type: Date, default: createdAt},
-    active: { type: boolean, default: false}
+    status: {type: String , enum: ["cancelled", "active"], default:"active"}
 })
 
-//for transaction -------
-const traShema = new mongoose.Schema({
-    //auto denrated id by mongo
-    amount: { type: Number, required: true},
-    paymentDate: { type: Date, required: true},
-    createdAt: { type: Date, default: Date.now },
+//for trans ---------------
+const tranSchema = new mongoose.Schema({
+    //id genere auto par mongodb
+    amount: {type: Number, required: true},
+    paymentDate: {type: Date, default: Date.now },
     subId: {
-        type: Number,
-        ref: 'Sub',
-        required: true
-    }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'sub',
+        required: true 
+    },
+    createdAt: {type: Date, default: Date.now }
 });
-
-const user = mongoose.model('User', userShema);
-const sub = mongoose.model('Sub', subShema);
-const tran = mongoose.model('Transiction', traShema);
+const tran = mongoose.model('tran', tranSchema)
+const user = mongoose.model('User', userSchema);
+const sub = mongoose.model('Sub', subSchema);
 
 module.exports = {user, sub, tran};
 
