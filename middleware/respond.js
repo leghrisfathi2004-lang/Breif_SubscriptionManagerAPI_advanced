@@ -1,9 +1,5 @@
-const resData = (res, code, data) => {
-  res.status(code).json({status: getStatus(code), data:data });
-}
-
-const resMessage = (res, code, msg) => {
-  res.status(code).json({status: getStatus(code), message:msg });
+const respond = (res, code, data) => {
+  return res.status(code).json({status: getStatus(code), data:data });   
 }
 
 function getStatus(code) {
@@ -22,10 +18,10 @@ function getStatus(code) {
     429: "Too Many Requests",
     500: "Internal Server Error",
     502: "Bad Gateway",
-    503: "Service Unavailable",
+    503: "Service Unavailable"
   };
 
   return statuses[code] ?? "Unknown status";
 }
 
-module.exports = { resData, resMessage };
+module.exports = { respond };
