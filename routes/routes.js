@@ -2,38 +2,36 @@
 const express = require('express');
 const router = express.Router();
 
-
-const {auth, authAdmine} = require('../middleware/auth.js');
-
-const {register, login, getUser, deleteUser, getAllUsers} = require('../controllers/users.controller.js');
-
-const {addSub, deleteSub, getAllSubs, getUserSubs, updateSub, filterSubs, addTran} = require('../controllers/subs.controller.js');
-
+const {authUser, authAdmin} = require('../middleware/auth.js');
 const {validateSub, validateUser, validateTran} = require("../middleware/validate.js");
+const {ownSub, owntran} = require('../middleware/ownership.js');
 
-const checkSub = require('../middleware/owner.js');
 
-//crud users
+const {register, login, profile, deleteUser, getAllUsers} = require('../controllers/users.controller.js');
+const {addSub, deleteSub, getAllSubs, updateSub, cancelSub} = require('../controllers/subs.controller.js');
+const {addTran, deleteTran, getAllTran} = require('../controllers/tran.controller.js');
+
+
+//crud user
 router.post("/users/new", validateUser, register);
-router.post("/users/login", validateUser, login);
-router.get("/users/profile", auth, getUser);
-router.delete("/users/delete", auth, deleteUser);
-
+router.post("/users/login", login);
+router.get("/users/profile", authUser, profile);
 
 //crud subs
-router.post("/users/subs", validateSub, auth, addSub);
-router.get("/users/subs", auth, getUserSubs);
-router.post("/users/subs/update", auth, checkSub, updateSub);
-router.delete("/users/subs/", auth, checkSub, deleteSub);
-router.get("/users/subs/filter", auth, filterSubs); 
-//only for email, id, name, price
+router.post("/users/subs", validateSub, authUser, addSub);
+router.delete("/users/subs/:id", authUser, ownSub, deleteSub);
+router.put("/users/subs/:id", authUser, ownSub, updateSub);
+router.patch("/users/subs/:id", authUser, ownSub, cancelSub);
+
 
 //crud trans
-router.post("/users/subs/tran", validateTran, auth, addTran);
+router.post("/users/subs/:id/trans", authUser, ownSub, addTran);
+router.delete("/users/subs/trans/:id", authUser, owntran, deleteTran);
 
-//crud by admin
-router.get("/admin/users", authAdmine, getAllUsers);
-router.delete("/admin/users", authAdmine, deleteUser);
-router.get("/admin/subs", authAdmine, getAllSubs);
+//crud routes
+router.get("/admin/users", authAdmin, getAllUsers);
+router.delete("/admin/users/:id", authAdmin, deleteUser);
+router.get("/admin/subs", authAdmin, getAllSubs);
+router.get("/admin/trans", authAdmin, getAllTran);
 
 module.exports = router;
