@@ -8,7 +8,7 @@ const {ownSub, owntran} = require('../middleware/ownership.js');
 
 
 const {register, login, profile, deleteUser, getAllUsers} = require('../controllers/users.controller.js');
-const {addSub, deleteSub, getAllSubs, updateSub, cancelSub} = require('../controllers/subs.controller.js');
+const {addSub, deleteSub, getAllSubs, updateSub, cancelSub, filterSub} = require('../controllers/subs.controller.js');
 const {addTran, deleteTran, getAllTran} = require('../controllers/tran.controller.js');
 
 
@@ -22,6 +22,7 @@ router.post("/users/subs", validateSub, authUser, addSub);
 router.delete("/users/subs/:id", authUser, ownSub, deleteSub);
 router.put("/users/subs/:id", authUser, ownSub, updateSub);
 router.patch("/users/subs/:id", authUser, ownSub, cancelSub);
+router.get("/users/subs", authUser, filterSub);
 
 
 //crud trans

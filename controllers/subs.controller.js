@@ -83,6 +83,20 @@ const cancelSub = async (req, res) => {
     }
 }
 
+const filterSub = async (req, res) => {
+    try{
+        const {id, name, price} = req.query;
+        let subInfo = {userId: req.user.id};
+        if(id)    subInfo._id = id;
+        if(name)    subInfo.name = name;
+        if(price)    subInfo.price = price;
+        const subs = await sub.find(subInfo);
+        if(!subs)   return respond(res, 404, "no subscribe founds matching ur filter!");
+        respond(res, 200, subs);
+    } catch(e) {
+        respond(res, 500, e.message);
+    }
+}
 
 
-module.exports = {addSub, deleteSub, getAllSubs, updateSub, cancelSub};
+module.exports = {addSub, deleteSub, getAllSubs, updateSub, cancelSub, filterSub};
